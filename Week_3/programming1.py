@@ -16,15 +16,13 @@ X_train, Y_train = X[::3], y[::3]
 X_val,   Y_val   = X[1::3], y[1::3]
 X_test,  Y_test  = X[2::3], y[2::3]
 
-
 mse_threshold = 1e-3
 val_mse = np.inf   # intitation
-val_mse_der = np.inf
 
 iteration = 0
 max_retries = 50  
 
-while (val_mse >= mse_threshold or val_mse_der >= mse_threshold) and iteration < max_retries:
+while (val_mse >= mse_threshold  and iteration < max_retries):
     iteration += 1
     print(f"Training attempt {iteration}...")
     lr = 0.01 if iteration==1 else 0.005
@@ -42,7 +40,7 @@ while (val_mse >= mse_threshold or val_mse_der >= mse_threshold) and iteration <
     # training
     model.fit(X_train, Y_train)
 
-    epsilon = 1e-5
+    epsilon = 1e-3
     # validation
     y_val_pred = model.predict(X_val)
     val_mse = mean_squared_error(Y_val, y_val_pred)
@@ -52,10 +50,10 @@ while (val_mse >= mse_threshold or val_mse_der >= mse_threshold) and iteration <
     dy_dx_pred = (y_plus - y_minus) / (2*epsilon)
     dy_dx_true = -50*X_val / (1 + 25*X_val**2)**2
     val_mse_der = mean_squared_error(dy_dx_true, dy_dx_pred)
+    val_mse = val_mse + val_mse_der
     print(f"Validation MSE: {val_mse:.6f}")
-    print(f"Validation MSE: {val_mse_der:.6f}")
 
-if val_mse < mse_threshold and val_mse_der < mse_threshold:
+if val_mse < mse_threshold :
     print("Training successful!")
 else:
     print("Reached max retries but validation MSE still too high.")

@@ -37,16 +37,18 @@ model = tf.keras.Sequential([
 # 更新權重的演算法
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 
-epochs = 1000
-
 # training
+epochs = 500
 iteration = 0
-max_retries = 50  
+max_retries = 50
 mse_threshold = 1e-5
 val_mse = float("inf")
-val_mse_der = float("inf")
 
-while (val_mse >= mse_threshold or val_mse_der >= mse_threshold) and iteration < max_retries:
+# loss
+train_loss_curve = []
+val_loss_curve = []
+
+while (val_mse >= mse_threshold) and iteration < max_retries:
   iteration += 1
   for epoch in range(epochs+1):
       with tf.GradientTape() as tape:
@@ -67,23 +69,28 @@ while (val_mse >= mse_threshold or val_mse_der >= mse_threshold) and iteration <
       grads = tape.gradient(loss_val, model.trainable_variables)
       optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-      if epoch % 200 == 0:
+      # Record training loss
+      train_loss_curve.append(loss_val.numpy())
+
+      # validation
+      y_val_pred = model(X_val_tf, training=False).numpy().ravel()
+      val_mse = mean_squared_error(Y_val, y_val_pred)
+
+      with tf.GradientTape() as tape_x_val:
+          tape_x_val.watch(X_val_tf)
+          y_val_pred_tf = model(X_val_tf, training=False)
+      dy_dx_val_pred = tape_x_val.gradient(y_val_pred_tf, X_val_tf).numpy().ravel()
+      dy_dx_val_true = true_derivative(X_val_tf).numpy().ravel()
+      val_mse_der = mean_squared_error(dy_dx_val_true, dy_dx_val_pred)
+
+      val_mse = val_mse + val_mse_der
+      # Record variation loss
+      val_loss_curve.append(val_mse)
+
+      if epoch % 100 == 0:
           print(f"Epoch {epoch+1}, Loss: {loss_val.numpy():.6f}")
+          print(f"Validation MSE: {val_mse:.6f}\n")
 
-  # validation
-  y_val_pred = model(X_val_tf, training=False).numpy().ravel()
-  val_mse = mean_squared_error(Y_val, y_val_pred)
-
-  with tf.GradientTape() as tape_x_val:
-      tape_x_val.watch(X_val_tf)
-      y_val_pred_tf = model(X_val_tf, training=False)
-  dy_dx_val_pred = tape_x_val.gradient(y_val_pred_tf, X_val_tf).numpy().ravel()
-  dy_dx_val_true = true_derivative(X_val_tf).numpy().ravel()
-  val_mse_der = mean_squared_error(dy_dx_val_true, dy_dx_val_pred)
-
-  val_mse = val_mse + val_mse_der
-
-  print(f"\nValidation MSE: {val_mse:.6f}")
 
 if val_mse < mse_threshold:
   print("Training successful!")
@@ -112,6 +119,17 @@ y_plot_pred = model(X_plot_tf).numpy()
 plt.figure(figsize=(8,5))
 plt.plot(X_plot, y_plot_true, label='True f(x)', linewidth=2)
 plt.plot(X_plot, y_plot_pred, '--', label='MLP prediction', linewidth=2)
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# plot loss curves
+plt.figure(figsize=(8,5))
+plt.plot(train_loss_curve, label="Training loss")
+plt.plot(val_loss_curve, label="Validation loss",)
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Training & Validation Loss Curves")
 plt.legend()
 plt.grid(True)
 plt.show()
