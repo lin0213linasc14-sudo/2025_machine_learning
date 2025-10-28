@@ -42,3 +42,25 @@ plt.ylabel("f(x)")
 plt.legend()
 plt.grid(True)
 plt.show()
+
+# Loss Plot
+degrees = range(1, 35)
+mse_list = []
+
+for d in degrees:
+    poly = PolynomialFeatures(degree=d)
+    X_poly = poly.fit_transform(X)
+    X_test_poly = poly.transform(X_test)
+    model = LinearRegression()
+    model.fit(X_poly, y)
+    y_pred = model.predict(X_test_poly)
+    mse_d = mean_squared_error(y_true, y_pred)
+    mse_list.append(mse_d)
+
+plt.figure(figsize=(8, 6))
+plt.plot(degrees, mse_list, marker='o', color='blue')
+plt.title("MSE vs Polynomial Degree")
+plt.xlabel("Polynomial Degree")
+plt.ylabel("Mean Squared Error (MSE)")
+plt.grid(True)
+plt.show()
