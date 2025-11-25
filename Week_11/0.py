@@ -35,9 +35,6 @@ reg.fit(sol_A.y[0].reshape(-1,1), sol_B.y[0])
 a = reg.coef_[0]
 b = reg.intercept_
 
-print(a, reg.coef_)
-
-
 print("最佳線性對應: x2 ~ {:.2f} * x1 + {:.2f}".format(a, b))
 
 # 視覺化比較
